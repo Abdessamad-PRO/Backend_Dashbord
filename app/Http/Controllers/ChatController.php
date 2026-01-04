@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\Http;
 class ChatController extends Controller
 {
     public function send(Request $request)
-    {
+    { 
         $message = $request->input('message');
 
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer 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',
-            'Content-Type' => 'application/json',
+        $response = Http::withHeaders([ 
+            'Authorization' => 'Bearer ' . env('HUGGING_FACE_TOKEN'),
+            'Content-Type' => 'application/json', 
         ])->post('https://api-inference.https://huggingface.co/deepseek-ai/DeepSeek-R1-0528', [
             'inputs' => $message,
         ]);
