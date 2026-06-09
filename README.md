@@ -1,71 +1,89 @@
 # Backend Dashboard (Laravel)
 
-Backend API pour un dashboard de gestion de projets et tâches, avec gestion des rôles (admin/manager/employé), demandes d’inscription approuvées par email, notifications applicatives, exports PDF/Excel et un endpoint de chat via Google Gemini.
+Backend API for a project & task management dashboard, with role-based access control (admin/manager/employee), email-approved registration requests, in-app notifications, PDF/Excel exports, and a chat endpoint powered by Google Gemini.
 
-## Stack technique
+## Tech stack
 
 - Laravel 10 + PHP >= 8.1 ([composer.json](./composer.json))
-- Auth API par tokens via Laravel Sanctum
-- Base de données: MySQL (par défaut)
+- Token-based API auth with Laravel Sanctum
+- Database: MySQL (default)
 - PDF: barryvdh/laravel-dompdf
 - Excel: maatwebsite/excel
-- Frontend attendu en dev: http://localhost:5173 (CORS)
+- Expected dev frontend origin: http://localhost:5173 (CORS)
 
-## Fonctionnalités
+## Features
 
-- Authentification: register/login/logout + récupération utilisateur courant
-- Profils: mise à jour des infos + upload photo de profil
-- Projets (manager/admin/employee):
-  - Admin: voit tous les projets
-  - Manager: voit et gère ses projets
-  - Employé: voit uniquement les projets où il a des tâches assignées
-- Tâches:
-  - CRUD côté manager (uniquement sur ses projets)
-  - Consultation côté employé (uniquement ses tâches)
-  - Dépendances: une tâche peut référencer une tâche précédente (previous_task_id)
-- Notifications applicatives (table app_notifications): lecture, comptage, suppression
-- Demandes métier:
-  - Demande de suppression de compte (employé → admin)
-  - Demande d’annulation de tâche (employé → manager)
-  - Demande de changement de statut (employé → manager)
+- Authentication: register/login/logout + current user endpoint
+- Profile: update user info + profile image upload
+- Projects (manager/admin/employee):
+  - Admin: sees all projects
+  - Manager: sees and manages their own projects
+  - Employee: only sees projects where they have assigned tasks
+- Tasks:
+  - CRUD for managers (only for their projects)
+  - Read-only for employees (only their own tasks)
+  - Dependencies: a task can reference a previous task (previous_task_id)
+- In-app notifications (app_notifications table): list, count, mark as read, delete
+- Business requests:
+  - Account deletion request (employee → admin)
+  - Task cancellation request (employee → manager)
+  - Task status change request (employee → manager)
 - Emails:
-  - Demande d’inscription notifie les admins
-  - Admin approuve/rejette, utilisateur reçoit un email et définit son mot de passe initial
-  - Réinitialisation mot de passe via code à 6 chiffres (valide 15 min)
-- Exports (manager uniquement):
-  - PDF: un projet, tous les projets, projets + employés
-  - Excel: un projet, tous les projets
-- IA:
-  - Endpoint public /api/chat relié à Google Gemini (clé API via .env)
+  - Registration request notifies admins
+  - Admin approves/rejects; user receives an email and sets an initial password
+  - Password reset using a 6-digit code (valid for 15 minutes)
+- Exports (manager only):
+  - PDF: single project, all projects, projects + employees
+  - Excel: single project, all projects
+- AI:
+  - Public `/api/chat` endpoint connected to Google Gemini (API key via `.env`)
 
-## Architecture (où trouver quoi)
+## Project structure (where to find what)
 
-- Routes API: [routes/api.php](./routes/api.php)
-- Contrôleurs: [app/Http/Controllers](./app/Http/Controllers)
-- Modèles: [app/Models](./app/Models)
-- Notifications email: [app/Notifications](./app/Notifications) + [resources/views/emails](./resources/views/emails)
-- Exports PDF: [resources/views/pdf](./resources/views/pdf)
-- Middleware rôles: [app/Http/Middleware/CheckRole.php](./app/Http/Middleware/CheckRole.php)
+- API routes: [routes/api.php](./routes/api.php)
+- Controllers: [app/Http/Controllers](./app/Http/Controllers)
+- Models: [app/Models](./app/Models)
+- Email notifications: [app/Notifications](./app/Notifications) + [resources/views/emails](./resources/views/emails)
+- PDF export templates: [resources/views/pdf](./resources/views/pdf)
+- Role middleware: [app/Http/Middleware/CheckRole.php](./app/Http/Middleware/CheckRole.php)
 
-## Installation (local)
+## Local setup
 
-### Prérequis
+### Requirements
 
 - PHP >= 8.1
 - Composer
-- MySQL (ou MariaDB)
+- MySQL (or MariaDB)
 
-### Étapes
+### Steps
 
-Depuis le dossier qui contient `artisan`:
+From the folder that contains `artisan`:
 
 ```bash
 composer install
+```
+
+Create your `.env`:
+
+- Windows:
+
+```bash
 copy .env.example .env
+```
+
+- macOS/Linux:
+
+```bash
+cp .env.example .env
+```
+
+Generate the application key:
+
+```bash
 php artisan key:generate
 ```
 
-Créer une base MySQL vide, puis configurer `.env` (voir exemple plus bas) et lancer:
+Create an empty MySQL database, configure `.env` (see example below), then run:
 
 ```bash
 php artisan migrate
@@ -73,13 +91,13 @@ php artisan storage:link
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-L’API est alors accessible sur:
+The API will be available at:
 
 - http://127.0.0.1:8000/api
 
-## Configuration `.env` (exemple)
+## `.env` configuration (example)
 
-Ne copie pas d’exemples avec de vraies clés. Mets tes propres valeurs.
+Do not copy examples with real secrets. Use your own values.
 
 ```env
 APP_NAME="Backend Dashboard"
@@ -112,21 +130,21 @@ GEMINI_API_KEY=YOUR_GOOGLE_GEMINI_API_KEY
 
 ### CORS (frontend)
 
-Le backend autorise par défaut uniquement `http://localhost:5173` via [config/cors.php](./config/cors.php). Si ton frontend tourne ailleurs, adapte `allowed_origins`.
+By default, the backend only allows `http://localhost:5173` in [config/cors.php](./config/cors.php). If your frontend runs on a different origin, update `allowed_origins`.
 
-## Authentification (Sanctum)
+## Authentication (Sanctum)
 
-Le login renvoie un token. Ensuite, toutes les routes protégées attendent un header:
+Login returns a token. All protected routes expect the header:
 
 ```
 Authorization: Bearer <token>
 ```
 
-## Démarrage rapide (curl)
+## Quick start (curl)
 
-### Créer un admin (dev)
+### Create an admin (dev)
 
-Le endpoint `/api/register` accepte `role` (user/manager/admin). En dev, tu peux créer un admin comme ceci:
+The `/api/register` endpoint accepts a `role` (user/manager/admin). In development, you can create an admin like this:
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/register" -H "Content-Type: application/json" -d "{\"name\":\"Admin\",\"email\":\"admin@example.com\",\"password\":\"password123\",\"password_confirmation\":\"password123\",\"role\":\"admin\"}"
@@ -138,79 +156,79 @@ curl -X POST "http://127.0.0.1:8000/api/register" -H "Content-Type: application/
 curl -X POST "http://127.0.0.1:8000/api/login" -H "Content-Type: application/json" -d "{\"email\":\"admin@example.com\",\"password\":\"password123\"}"
 ```
 
-Récupère la valeur `token` dans la réponse JSON.
+Extract the `token` value from the JSON response.
 
-### Appeler une route protégée
+### Call a protected route
 
 ```bash
 curl "http://127.0.0.1:8000/api/projects" -H "Authorization: Bearer <token>"
 ```
 
-### Mettre à jour le profil (avec photo)
+### Update profile (with image)
 
 ```bash
-curl -X PUT "http://127.0.0.1:8000/api/profile" -H "Authorization: Bearer <token>" -F "name=Nouveau Nom" -F "photo_de_profile=@C:\\chemin\\vers\\image.jpg"
+curl -X PUT "http://127.0.0.1:8000/api/profile" -H "Authorization: Bearer <token>" -F "name=New Name" -F "photo_de_profile=@C:\\path\\to\\image.jpg"
 ```
 
-## Workflows métier (comment ça fonctionne)
+## Business flows (how it works)
 
-### Demande d’inscription (utilisateur → admin → utilisateur)
+### Registration request (user → admin → user)
 
-1. Public: l’utilisateur envoie POST `/api/request-registration`
-2. Le backend notifie tous les admins par email (il faut au moins 1 admin existant)
-3. L’admin approuve/rejette via l’API (auth) ou via un lien direct reçu par email
-4. Si approuvé: un compte utilisateur est créé avec un mot de passe temporaire + un token
-5. L’utilisateur définit son mot de passe via POST `/api/set-initial-password`
+1. Public: user sends POST `/api/request-registration`
+2. The backend emails all admins (you need at least one existing admin user)
+3. Admin approves/rejects either via the authenticated API or via a direct email link
+4. If approved: a user account is created with a temporary password + token
+5. User sets their password via POST `/api/set-initial-password`
 
-### Réinitialisation mot de passe (code)
+### Password reset (code)
 
-1. POST `/api/forgot-password` envoie un code à 6 chiffres par email
-2. POST `/api/verify-reset-code` valide le code (durée: 15 minutes)
-3. POST `/api/reset-password` change le mot de passe et invalide le code
+1. POST `/api/forgot-password` sends a 6-digit code by email
+2. POST `/api/verify-reset-code` validates the code (valid for 15 minutes)
+3. POST `/api/reset-password` updates the password and invalidates the code
 
-### Demande suppression de compte (utilisateur → admin)
+### Account deletion request (user → admin)
 
-1. Auth: POST `/api/account/delete-request` crée une demande `pending`
-2. Les admins reçoivent une notification applicative (table `app_notifications`)
-3. Admin approuve: le compte est supprimé
-4. Admin rejette: l’utilisateur reçoit une notification avec la raison
+1. Auth: POST `/api/account/delete-request` creates a `pending` request
+2. Admins receive an in-app notification (app_notifications table)
+3. Admin approves: the account is deleted
+4. Admin rejects: the user receives an in-app notification with the reason
 
-### Demande annulation de tâche (employé → manager)
+### Task cancellation request (employee → manager)
 
-1. Auth: POST `/api/task-cancellation-request/{taskId}` (uniquement si la tâche est assignée à l’employé)
-2. Le manager reçoit une notification applicative
-3. Manager approuve: la tâche est supprimée; rejet: notification côté employé
+1. Auth: POST `/api/task-cancellation-request/{taskId}` (only if the task is assigned to the employee)
+2. The manager receives an in-app notification
+3. Manager approves: the task is deleted; if rejected: employee is notified
 
-### Demande changement de statut (employé → manager)
+### Task status change request (employee → manager)
 
-1. Auth: POST `/api/task-status-change-request/{taskId}` avec `requested_status` (en_attente/en_cours/terminé)
-2. Le manager approuve/rejette via les endpoints dédiés
-3. Si approuvé: la tâche est mise à jour
+1. Auth: POST `/api/task-status-change-request/{taskId}` with `requested_status` (en_attente/en_cours/terminé)
+2. The manager approves/rejects using the dedicated endpoints
+3. If approved: the task status is updated
 
-## Endpoints principaux (résumé)
+## Main endpoints (summary)
 
 Base: `/api`
 
 ### Public
 
-- POST `/register` (crée un user directement)
+- POST `/register` (creates a user directly)
 - POST `/login`
 - POST `/chat` (Gemini)
-- POST `/request-registration` (demande d’inscription, notifie les admins)
-- POST `/set-initial-password` (définir le mot de passe après approbation)
+- POST `/request-registration` (registration request, emails admins)
+- POST `/set-initial-password` (set password after approval)
 - POST `/forgot-password`
 - POST `/verify-reset-code`
 - POST `/reset-password`
-- GET `/admin/approve-registration-direct/{id}/{token}` (depuis email)
-- GET `/admin/reject-registration-form/{id}/{token}` (form HTML)
-- POST `/admin/reject-registration-direct/{id}/{token}` (depuis email)
-- GET `/set-password/{token}` (page HTML)
+- GET `/admin/approve-registration-direct/{id}/{token}` (from email)
+- GET `/admin/reject-registration-form/{id}/{token}` (HTML form)
+- POST `/admin/reject-registration-direct/{id}/{token}` (from email)
+- GET `/set-password/{token}` (HTML page)
 
-### Authentifié (auth:sanctum)
+### Authenticated (auth:sanctum)
 
 - POST `/logout`
 - GET `/user`
-- PUT `/profile` (multipart/form-data si photo)
+- PUT `/profile` (use multipart/form-data when uploading an image)
 
 **Notifications**
 
@@ -222,7 +240,7 @@ Base: `/api`
 - DELETE `/notifications/{id}`
 - DELETE `/notifications`
 
-**Projets & tâches (lecture)**
+**Projects & tasks (read)**
 
 - GET `/projects`
 - GET `/projects/{id}`
@@ -232,21 +250,21 @@ Base: `/api`
 - GET `/employees/stats`
 - GET `/managers/stats`
 
-**Demandes**
+**Requests**
 
 - POST `/account/delete-request`
 - GET `/account/delete-request/status`
 - POST `/task-cancellation-request/{taskId}`
 - POST `/task-status-change-request/{taskId}`
 
-### Admin uniquement (middleware role:admin)
+### Admin only (role:admin middleware)
 
 - GET `/admin/pending-registrations`
 - GET `/admin/registration/{id}`
 - POST `/admin/approve-registration/{id}`
 - POST `/admin/reject-registration/{id}`
 
-Gestion demandes suppression de compte:
+Account deletion requests:
 
 - GET `/admin/delete-requests`
 - GET `/admin/delete-requests/pending`
@@ -255,16 +273,16 @@ Gestion demandes suppression de compte:
 - POST `/admin/delete-requests/{id}/reject`
 - DELETE `/admin/delete-requests/users/{id}`
 
-### Manager uniquement (middleware role:manager)
+### Manager only (role:manager middleware)
 
-Projets:
+Projects:
 
 - POST `/projects`
 - PUT `/projects/{id}`
 - DELETE `/projects/{id}`
-- GET `/assign-user` (liste employés)
+- GET `/assign-user` (list employees)
 
-Tâches:
+Tasks:
 
 - POST `/projects/{projectId}/tasks`
 - PUT `/projects/{projectId}/tasks/{taskId}`
@@ -279,14 +297,14 @@ Exports:
 - GET `/export/excel/project/{projectId}`
 - GET `/export/excel/projects`
 
-Demandes (côté manager):
+Requests (manager side):
 
 - POST `/manager/task-cancellations/{id}/approve`
 - POST `/manager/task-cancellations/{id}/reject`
 - POST `/task-status-change-request/{id}/approve`
 - POST `/task-status-change-request/{id}/reject`
 
-## Modèle de données (résumé)
+## Data model (summary)
 
 - `users`: name, prenom, email, password, role (user/manager/admin), telephone, adresse, departement, photo_de_profile, bio
 - `projects`: name, description, start_date, end_date, status (en_attente/en_cours/terminé), manager_id
@@ -297,8 +315,15 @@ Demandes (côté manager):
 - `task_cancellation_requests`: task_id, user_id, name, reason, status, processed_by, processed_at, rejection_reason
 - `task_status_change_requests`: task_id, user_id, requested_status, status, processed_by, processed_at
 
-## Points d’attention (à connaître)
+## Notes (important)
 
-- Pour que la demande d’inscription notifie quelqu’un, il faut au moins un admin existant en base (users.role=admin).
-- Certaines migrations sont en doublon (ex: `app_notifications`, `delete_account_requests`, champs `adresse/departement`), ce qui peut faire échouer `php artisan migrate` sur une base neuve.
-- Un contrôleur de chat alternatif contient une clé hardcodée (à éviter). Il n’est pas exposé par les routes, mais la clé doit être révoquée et déplacée vers `.env` si vous l’utilisez.
+- For registration requests to email someone, you need at least one admin user in the database (users.role=admin).
+- Some migrations are duplicated (e.g. `app_notifications`, `delete_account_requests`, `adresse/departement` fields), which can cause `php artisan migrate` to fail on a fresh database.
+- An alternative chat controller contains a hardcoded API token (avoid this). It is not wired in the routes, but the token should be revoked and moved to `.env` if you decide to use it.
+
+## Production deployment
+
+- Set `APP_ENV=production` and `APP_DEBUG=false`
+- Set `APP_URL` (your domain) + SMTP configuration
+- Run `php artisan migrate --force`
+- Optional: `php artisan config:cache` and `php artisan route:cache`
